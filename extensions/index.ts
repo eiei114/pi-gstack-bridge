@@ -1,9 +1,12 @@
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
+import { createRequire } from "node:module";
 import { Type, type Static } from "typebox";
 import { applyPiLaunchPlan, isRunnablePlan, renderPiLaunchPlan, resolvePiLaunchPlan } from "../lib/pi-launcher.ts";
 import { directModelCliReason, mutatingShellCommand } from "../lib/policy.ts";
 import { runPiChild, smokePiLaunchPlan } from "../lib/runner.ts";
 import type { GstackBridgeContext, GstackBridgeMode, GstackBridgeRequest } from "../lib/types.ts";
+
+const require = createRequire(import.meta.url);
 
 const modeValues = ["agent", "review", "challenge", "consult", "design"] as const;
 
@@ -100,6 +103,42 @@ function toolResult(text: string, details: unknown) {
   return { content: [{ type: "text" as const, text }], details };
 }
 
+type GstackExtension = (pi: ExtensionAPI) => void | Promise<void>;
+
+function loadGstackExtension(): GstackExtension | undefined {
+  try {
+    const loaded = require("pi-gstack/extensions/gstack.js") as { default?: GstackExtension } | GstackExtension;
+    return typeof loaded === "function" ? loaded : loaded.default;
+  } catch {
+    return undefined;
+  }
+}
+
+function registerGstackSurfaceWithoutLegacyAgents(pi: ExtensionAPI): boolean {
+  const gstackExtension = loadGstackExtension();
+  if (!gstackExtension) return false;
+
+  // pi-gstack owns the skills, safety hooks, compatibility helpers, and
+  // gstack-* commands. Its legacy Agent/Task registrations are deliberately
+  // filtered here so this extension can register the Pi-routed replacements
+  // without triggering Pi's duplicate-tool diagnostic.
+  const delegatedPi = new Proxy(pi, {
+    get(target, property, receiver) {
+      if (property === "registerTool") {
+        return (definition: { name?: string }) => {
+          if (definition.name === "Agent" || definition.name === "Task") return;
+          return target.registerTool(definition as Parameters<ExtensionAPI["registerTool"]>[0]);
+        };
+      }
+      const value = Reflect.get(target, property, receiver);
+      return typeof value === "function" ? value.bind(target) : value;
+    },
+  }) as ExtensionAPI;
+
+  void gstackExtension(delegatedPi);
+  return true;
+}
+
 function statusText(pi: ExtensionAPI): string {
   const plan = resolvePiLaunchPlan();
   const nativeSubagents = pi.getAllTools?.()?.some((tool) => tool.name === "subagent") ?? false;
@@ -147,6 +186,8 @@ function registerBridgeTool(pi: ExtensionAPI, name: string, label: string, descr
 }
 
 export default function piGstackBridge(pi: ExtensionAPI): void {
+  registerGstackSurfaceWithoutLegacyAgents(pi);
+
   pi.on("session_start", async () => {
     if (process.env.PI_GSTACK_BRIDGE_CHILD === "1") return;
     applyPiLaunchPlan(resolvePiLaunchPlan());

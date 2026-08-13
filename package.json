@@ -56,6 +56,9 @@
     "@earendil-works/pi-tui": "*",
     "typebox": "*"
   },
+  "dependencies": {
+    "pi-gstack": "^0.2.0"
+  },
   "overrides": {
     "protobufjs": ">=7.6.3 <8.0.0"
   },

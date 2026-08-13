@@ -12,13 +12,14 @@ Pi-native agent bridge for gstack. Routes review, challenge, design, and second-
 
 ## What this is
 
-`pi-gstack-bridge` is a routing and safety boundary for [pi-gstack](https://github.com/salarsayyad/pi-gstack). Codex can remain the selected provider/model (`openai-codex/...`), while Pi owns the child launch, authentication, timeout, cancellation, tool allowlist, and Windows executable resolution.
+`pi-gstack-bridge` is the routing and safety boundary for [pi-gstack](https://github.com/salarsayyad/pi-gstack). It embeds pi-gstack's skills, safety hooks, compatibility helpers, and commands while filtering its legacy `Agent`/`Task` registrations. The bridge then supplies Pi-routed replacements for those tools. Codex can remain the selected provider/model (`openai-codex/...`), while Pi owns the child launch, authentication, timeout, cancellation, tool allowlist, and Windows executable resolution.
 
 ## Features
 
 - Pi-routed `Agent` and `Task` compatibility tools
 - `gstack_pi_agent` for specialist work
 - `gstack_pi_review` for independent read-only review
+- gstack skills, safety hooks, compatibility helpers, and commands without a second gstack extension
 - Direct `codex`, `claude`, and `gemini` CLI blocking
 - Windows npm-shim-safe Pi CLI resolution
 - Local run artifacts and diagnostics
@@ -29,7 +30,7 @@ Pi-native agent bridge for gstack. Routes review, challenge, design, and second-
 pi install npm:pi-gstack-bridge
 ```
 
-Load it before `pi-gstack` in the package list. Pi keeps the first tool registration, so this order makes the Pi-routed `Agent` and `Task` compatibility tools win.
+Do **not** load `npm:pi-gstack` separately in the same settings file. The bridge loads its gstack surface internally and removes the duplicate `Agent`/`Task` registrations before Pi validates extension tools. This avoids the startup error `Tool "Agent" conflicts with ...`.
 
 ## Quick start
 
@@ -60,6 +61,7 @@ The tools are available to gstack workflows automatically:
 ## Package contents
 
 - `extensions/index.ts` — Pi tools, routing prompt, guardrails, commands
+- `pi-gstack` dependency — gstack skills, safety hooks, compatibility helpers, and commands, loaded through the bridge
 - `lib/pi-launcher.ts` — cross-platform Pi launch-plan resolver
 - `lib/runner.ts` — child Pi runner and artifacts
 - `lib/policy.ts` — direct-model-CLI and read-only shell policy

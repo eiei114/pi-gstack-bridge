@@ -11,7 +11,7 @@ All gstack model work runs through Pi.
 
 - Use `gstack_pi_review` for independent code or plan review.
 - Use `gstack_pi_agent` for specialist, adversarial, design, or consultation work.
-- `Agent` and `Task` are compatibility aliases and are already routed through the same Pi child launcher.
+- `Agent` and `Task` are compatibility aliases supplied by the bridge and are routed through the same Pi child launcher.
 - Select a different Pi provider/model for a second opinion. Do not launch `codex`, `claude`, or `gemini` from Bash.
 
 ## Forbidden routing

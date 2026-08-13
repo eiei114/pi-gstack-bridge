@@ -12,6 +12,12 @@ gstack skill
         -> configured provider/model
 ```
 
+The bridge loads pi-gstack's gstack surface internally, but filters the
+legacy `Agent` and `Task` registrations before they enter Pi's extension
+registry. This keeps gstack safety hooks, compatibility helpers, commands,
+and skill discovery while making the bridge the only owner of those two tool
+names.
+
 Codex remains usable as a Pi provider/model (`openai-codex/...`). The Codex CLI is not used.
 
 ## Windows launch resolution
