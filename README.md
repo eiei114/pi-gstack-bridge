@@ -29,7 +29,7 @@ Pi-native agent bridge for gstack. Routes review, challenge, design, and second-
 pi install npm:pi-gstack-bridge
 ```
 
-Load it after `pi-gstack` so the compatibility tools are replaced by the Pi-routed versions.
+Load it before `pi-gstack` in the package list. Pi keeps the first tool registration, so this order makes the Pi-routed `Agent` and `Task` compatibility tools win.
 
 ## Quick start
 
