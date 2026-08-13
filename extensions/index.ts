@@ -175,6 +175,19 @@ export default function piGstackBridge(pi: ExtensionAPI): void {
     }
   });
 
+  pi.on("user_bash", async (event) => {
+    const reason = directModelCliReason(event.command);
+    if (!reason) return;
+    return {
+      result: {
+        output: `${reason}\n`,
+        exitCode: 126,
+        cancelled: false,
+        truncated: false,
+      },
+    };
+  });
+
   registerBridgeTool(
     pi,
     "gstack_pi_agent",

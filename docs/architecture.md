@@ -31,7 +31,7 @@ No global PATH or shell profile is modified.
 
 ## Safety
 
-- Parent sessions block direct `codex`, `claude`, and `gemini` CLI invocations.
+- Parent sessions block direct `codex`, `claude`, and `gemini` CLI invocations from both agent Bash tool calls and user Bash commands.
 - Child review sessions receive no edit/write tools.
 - Read-only child Bash commands are checked for common mutation patterns.
 - Run artifacts remain under `~/.gstack/pi-bridge-runs` unless `GSTACK_PI_BRIDGE_RUN_DIR` is set.
