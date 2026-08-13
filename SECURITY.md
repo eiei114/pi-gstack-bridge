@@ -1,5 +1,18 @@
 # Security Policy
 
+`pi-gstack-bridge` runs child Pi sessions with the same local user permissions as the parent Pi process.
+
+## Reporting
+
+Please report security issues privately through the repository security advisories page rather than opening a public issue.
+
+## Design notes
+
+- Direct external model CLI invocation is blocked.
+- Review children are read-only by default.
+- Child prompts and outputs are stored locally under `~/.gstack/pi-bridge-runs`.
+- Do not include secrets in review prompts or issue reports.
+
 ## Supported versions
 
 Only the latest published version receives security fixes.

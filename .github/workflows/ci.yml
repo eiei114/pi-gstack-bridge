@@ -24,6 +24,5 @@ jobs:
         with:
           node-version: 24
           cache: npm
-      - uses: oven-sh/setup-bun@v2
       - run: npm ci
       - run: npm run ci

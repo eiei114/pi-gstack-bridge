@@ -1,119 +1,91 @@
-# Pi Extension Template
+# pi-gstack-bridge
 
-[![Join dotfield.xyz on Discord](https://img.shields.io/badge/Join%20dotfield.xyz%20on%20Discord-5865F2?logo=discord&logoColor=white)](https://discord.gg/4945dXZVW5)
+[![CI](https://github.com/eiei114/pi-gstack-bridge/actions/workflows/ci.yml/badge.svg)](https://github.com/eiei114/pi-gstack-bridge/actions/workflows/ci.yml)
+[![Publish](https://github.com/eiei114/pi-gstack-bridge/actions/workflows/publish.yml/badge.svg)](https://github.com/eiei114/pi-gstack-bridge/actions/workflows/publish.yml)
+[![npm](https://img.shields.io/npm/v/pi-gstack-bridge)](https://www.npmjs.com/package/pi-gstack-bridge)
+[![npm downloads](https://img.shields.io/npm/dm/pi-gstack-bridge)](https://www.npmjs.com/package/pi-gstack-bridge)
+[![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![Pi package](https://img.shields.io/badge/Pi-package-7c3aed)](https://pi.dev/packages)
+[![Trusted Publishing](https://img.shields.io/badge/npm-Trusted%20Publishing-success)](docs/release.md)
 
-[![CI](https://github.com/eiei114/pi-extension-template/actions/workflows/ci.yml/badge.svg)](https://github.com/eiei114/pi-extension-template/actions/workflows/ci.yml)
-[![Publish](https://github.com/eiei114/pi-extension-template/actions/workflows/publish.yml/badge.svg)](https://github.com/eiei114/pi-extension-template/actions/workflows/publish.yml)
-[![npm version](https://img.shields.io/npm/v/create-pi-extension.svg)](https://www.npmjs.com/package/create-pi-extension)
-[![npm downloads](https://img.shields.io/npm/dm/create-pi-extension.svg)](https://www.npmjs.com/package/create-pi-extension)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![Pi package](https://img.shields.io/badge/pi-package-purple.svg)](https://pi.dev/packages)
-[![Trusted Publishing](https://img.shields.io/badge/npm-Trusted%20Publishing-blue.svg)](docs/release.md)
-<a href="https://buymeacoffee.com/ekawano114m"><img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" alt="Buy Me A Coffee" width="217" height="60"></a>
-
-> Template for building Pi packages with extensions, Agent Skills, prompts, and themes.
+Pi-native agent bridge for gstack. Routes review, challenge, design, and second-opinion work through child Pi sessions instead of directly launching Codex, Claude, or Gemini CLIs.
 
 ## What this is
 
-This repository is the **template source** for new Pi extension OSS projects. The published npm package is [`create-pi-extension`](https://www.npmjs.com/package/create-pi-extension), not the root `pi-extension-template` name.
+`pi-gstack-bridge` is a routing and safety boundary for [pi-gstack](https://github.com/salarsayyad/pi-gstack). Codex can remain the selected provider/model (`openai-codex/...`), while Pi owns the child launch, authentication, timeout, cancellation, tool allowlist, and Windows executable resolution.
 
 ## Features
 
-- Interactive `create-pi-extension` CLI for scoped and unscoped package names.
-- TypeScript-first examples for extensions, Agent Skills, prompts, themes, tools, and TUI components.
-- GitHub Actions CI, npm Trusted Publishing, security policy, issue templates, and release automation.
-- Canonical public README with standard badges, install paths, quick start, package contents, and security guidance.
-- Canonical scaffold README shared by CLI-first generation and the GitHub Template setup checklist.
+- Pi-routed `Agent` and `Task` compatibility tools
+- `gstack_pi_agent` for specialist work
+- `gstack_pi_review` for independent read-only review
+- Direct `codex`, `claude`, and `gemini` CLI blocking
+- Windows npm-shim-safe Pi CLI resolution
+- Local run artifacts and diagnostics
 
 ## Install
 
-Create a new Pi extension package with the published CLI:
-
 ```bash
-bunx create-pi-extension@latest my-pi-package
+pi install npm:pi-gstack-bridge
 ```
+
+Load it after `pi-gstack` so the compatibility tools are replaced by the Pi-routed versions.
 
 ## Quick start
 
-### Primary path (recommended)
-
-Scaffold a new project with the CLI:
-
-```bash
-bunx create-pi-extension my-pi-package
+```text
+/gstack-bridge:status
+/gstack-bridge:doctor
 ```
 
-The CLI copies the bundled template, replaces placeholders, removes bootstrap docs, and can run `git init` plus `bun install`. See [`docs/template-checklist.md`](docs/template-checklist.md) for the minimal follow-up checklist.
+The tools are available to gstack workflows automatically:
 
-For a scoped package name:
-
-```bash
-bunx create-pi-extension @my-scope/my-pi-tool
+```json
+{
+  "task": "Review this branch for production regressions and security issues.",
+  "mode": "review",
+  "readOnly": true
+}
 ```
 
-### Secondary path: GitHub Template
+## Configuration
 
-Create a repository from this template when you prefer GitHub-first onboarding:
-
-```bash
-gh repo create OWNER/my-pi-package \
-  --template eiei114/pi-extension-template \
-  --clone
-```
-
-Then follow the **Secondary path** section in [`docs/template-checklist.md`](docs/template-checklist.md) for manual placeholder replacement, metadata, and post-generation cleanup.
-That checklist first copies `scaffold/package-readme.md` to `README.md`, giving GitHub Template users the same standard badges and README structure as CLI-generated packages.
-
-## Legacy npm package
-
-Do **not** use `pi install npm:pi-extension-template` as the main onboarding path. Use **`create-pi-extension`** to scaffold a new project instead. The legacy root-package install will be removed from npm in a future release. After you publish your own extension, install it with `pi install npm:YOUR_PACKAGE_NAME` as documented in that project's README.
+| Variable | Purpose |
+| --- | --- |
+| `PI_GSTACK_BRIDGE_CLI` | Explicit `pi-coding-agent/dist/cli.js` path |
+| `PI_GSTACK_BRIDGE_PI_BIN` | Explicit Pi executable or npm shim |
+| `GSTACK_PI_BRIDGE_MODEL` | Default child model when the parent has none |
+| `GSTACK_PI_BRIDGE_RUN_DIR` | Override local run-artifact directory |
 
 ## Package contents
 
-| Path | Purpose |
-|---|---|
-| Repository root | Template source (not published to npm) |
-| `packages/create-pi-extension/` | Published scaffold CLI |
-| `scaffold/` | Generated-package README source synced into the bundled template |
-| `docs/` | Maintainer docs and template bootstrap guides |
+- `extensions/index.ts` — Pi tools, routing prompt, guardrails, commands
+- `lib/pi-launcher.ts` — cross-platform Pi launch-plan resolver
+- `lib/runner.ts` — child Pi runner and artifacts
+- `lib/policy.ts` — direct-model-CLI and read-only shell policy
+- `skills/gstack-pi-bridge/SKILL.md` — gstack routing instructions
 
 ## Development
 
 ```bash
-npm install
+npm ci
 npm run ci
+pi -e .
 ```
-
-`npm run ci` runs typecheck, `sync:template`, CLI scaffold tests, a `create-pi-extension` pack check, and template sync assertions.
-
-See [`CONTRIBUTING.md`](CONTRIBUTING.md) and [`docs/template-sync.md`](docs/template-sync.md).
 
 ## Release
 
-Releases publish **`create-pi-extension`** to npm through Trusted Publishing. The root template source is not published.
-
-See [`docs/release.md`](docs/release.md) for setup details.
-
-## Docs
-
-- [`docs/template-checklist.md`](docs/template-checklist.md) — Primary vs Secondary setup flows
-- [`docs/template-sync.md`](docs/template-sync.md) — refresh `packages/create-pi-extension/template/` before CLI publish
-- [`docs/template-sync-checklist.md`](docs/template-sync-checklist.md) — checklist for syncing and verifying the bundled template
-- [`docs/examples.md`](docs/examples.md) — extension, skill, prompt, and theme examples
-- [`docs/release.md`](docs/release.md) — Trusted Publishing and monorepo publish path
-- [`ROADMAP.md`](ROADMAP.md) — current status, priorities, and the maintenance seed backlog
+See [docs/release.md](docs/release.md). Publishing uses npm Trusted Publishing; long-lived npm tokens are not supported.
 
 ## Security
 
-Pi packages can execute code with your local permissions. Review extensions before installing third-party packages.
-
-For vulnerability reporting, see [`SECURITY.md`](SECURITY.md).
+This package executes Pi child processes with local-user permissions. Read [SECURITY.md](SECURITY.md) before installing it in an untrusted repository.
 
 ## Links
 
-- npm (`create-pi-extension`): https://www.npmjs.com/package/create-pi-extension
-- GitHub: https://github.com/eiei114/pi-extension-template
-- Issues: https://github.com/eiei114/pi-extension-template/issues
+- [Architecture](docs/architecture.md)
+- [GitHub](https://github.com/eiei114/pi-gstack-bridge)
+- [npm](https://www.npmjs.com/package/pi-gstack-bridge)
 
 ## License
 
