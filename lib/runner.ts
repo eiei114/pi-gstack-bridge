@@ -287,7 +287,6 @@ export async function runPiChild(
     PI_GSTACK_BRIDGE_CHILD: "1",
     PI_GSTACK_BRIDGE_READ_ONLY: readOnly ? "1" : "0",
     PI_SKIP_VERSION_CHECK: "1",
-    PI_SPAWNKIT_DISABLE_SESSION_PATCH: "1",
   };
   applyPiLaunchPlan(plan, env);
 
