@@ -5,8 +5,10 @@ const { directModelCli, directModelCliReason, mutatingShellCommand } = await imp
 
 test("detects direct Codex invocations and availability probes", () => {
   assert.equal(directModelCli("codex review --all"), "codex");
+  assert.equal(directModelCli("codex >/dev/null"), "codex");
   assert.equal(directModelCli("command -v codex >/dev/null"), "codex");
   assert.equal(directModelCli("_gstack_timeout 300 codex exec \"review\""), "codex");
+  assert.equal(directModelCli("claude -p \"review\""), "claude");
   assert.match(directModelCliReason("codex exec prompt") ?? "", /gstack_pi_agent/u);
 });
 

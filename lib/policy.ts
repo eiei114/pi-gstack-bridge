@@ -8,8 +8,15 @@ export function directModelCli(command: string): string | undefined {
   const lookupMatch = text.match(lookup);
   if (lookupMatch) return lookupMatch[1];
 
+  const bareInvocation = new RegExp(
+    `(?:^|[;&|\\n]\\s*)\\b(${MODEL_CLI_NAMES})(?:\\.exe)?(?=\\s*(?:\\d*>>?|&>|$))`,
+    "iu",
+  );
+  const bareMatch = text.match(bareInvocation);
+  if (bareMatch) return bareMatch[1];
+
   const invocation = new RegExp(
-    `(?:^|[;&|]\\s*|\\b(?:env|timeout|nohup|command)\\s+)(?:[^;&|]*?\\s+)?\\b(${MODEL_CLI_NAMES})(?:\\.exe)?\\s+(?:exec|review|run|chat|login|--version)\\b`,
+    `(?:^|[;&|\\n]\\s*|\\b(?:env|timeout|nohup|command)\\s+)(?:[^;&|\\n]*?\\s+)?\\b(${MODEL_CLI_NAMES})(?:\\.exe)?\\s+(?:exec|review|run|chat|login|--version|--help|-p|--prompt|--model|--dangerously-skip-permissions)\\b`,
     "iu",
   );
   const invocationMatch = text.match(invocation);
