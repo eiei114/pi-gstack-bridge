@@ -37,5 +37,18 @@ jobs:
           package-manager-cache: false
       - run: npm ci
       - run: npm run ci
+      - name: Check whether version is already published
+        id: published
+        shell: bash
+        run: |
+          PACKAGE=$(node -p "require('./package.json').name")
+          VERSION=$(node -p "require('./package.json').version")
+          if npm view "${PACKAGE}@${VERSION}" version >/dev/null 2>&1; then
+            echo "already_published=true" >> "$GITHUB_OUTPUT"
+            echo "${PACKAGE}@${VERSION} is already published; skipping duplicate publish."
+          else
+            echo "already_published=false" >> "$GITHUB_OUTPUT"
+          fi
       - name: Publish
+        if: steps.published.outputs.already_published != 'true'
         run: npm publish --access public
