@@ -1,6 +1,6 @@
 {
   "name": "pi-gstack-bridge",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Pi-native agent bridge for gstack review and specialist workflows.",
   "type": "module",
   "license": "MIT",
