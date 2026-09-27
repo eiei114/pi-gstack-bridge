@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.2 - 2026-09-27
+
+- chore: periodic patch bump after 7+ days without npm publish
+
 ## [0.1.1] - 2026-08-30
 
 - Make the bridge own the gstack `Agent` and `Task` compatibility tools.
