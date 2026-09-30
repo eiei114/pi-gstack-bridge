@@ -4,6 +4,12 @@
 
 - chore: periodic patch bump after 7+ days without npm publish
 
+## [0.1.3] - 2026-09-30
+
+### Changed
+
+- Update `@earendil-works/pi-*` dependencies to `0.99.1`.
+
 ## [0.1.1] - 2026-08-30
 
 - Make the bridge own the gstack `Agent` and `Task` compatibility tools.
