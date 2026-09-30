@@ -1,6 +1,6 @@
 {
   "name": "pi-gstack-bridge",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "Pi-native agent bridge for gstack review and specialist workflows.",
   "type": "module",
   "license": "MIT",
@@ -63,10 +63,10 @@
     "protobufjs": ">=7.6.3 <8.0.0"
   },
   "devDependencies": {
-    "@earendil-works/pi-agent-core": "^0.83.0",
-    "@earendil-works/pi-ai": "^0.83.0",
-    "@earendil-works/pi-coding-agent": "^0.83.0",
-    "@earendil-works/pi-tui": "^0.83.0",
+    "@earendil-works/pi-agent-core": "^0.99.1",
+    "@earendil-works/pi-ai": "^0.99.1",
+    "@earendil-works/pi-coding-agent": "^0.99.1",
+    "@earendil-works/pi-tui": "^0.99.1",
     "@types/node": "^26.0.0",
     "typebox": "latest",
     "typescript": "^7.0.2"
