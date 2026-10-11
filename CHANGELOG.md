@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- Pin Pi SDK development dependencies to 1.1.0 and run live extension compatibility smoke cases in CI on Linux and Windows.
+
 ## 0.1.2 - 2026-09-27
 
 - chore: periodic patch bump after 7+ days without npm publish

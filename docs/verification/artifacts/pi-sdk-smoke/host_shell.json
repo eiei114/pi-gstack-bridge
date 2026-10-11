@@ -1,0 +1,30 @@
+{
+  "schema_version": 1,
+  "case": "host_shell",
+  "command": "npm run smoke:pi -- --case host_shell",
+  "sdk_version": "1.1.0",
+  "platform": "win32",
+  "process_exit_codes": [
+    0
+  ],
+  "extension_load_errors": 0,
+  "unhandled_errors": 0,
+  "assertions": [
+    {
+      "id": "native_shell_boundary",
+      "expected": "The actual bridge child executes the installed Pi 1.1.0 CLI through process.execPath with shell=false and returns a handled feature response; on Windows this bypasses pi.cmd.",
+      "observed": "win32: executable=node.exe, cli=node_modules/@earendil-works/pi-coding-agent/dist/cli.js, shell=false; child response contained PI_GSTACK_SMOKE_RELOADED_OK.",
+      "passed": true
+    }
+  ],
+  "observation": {
+    "parentResponse": "PARENT_OBSERVED_RELOADED_CHILD_OK",
+    "toolResponse": "PI_GSTACK_SMOKE_RELOADED_OK",
+    "platform": "win32",
+    "launchCommand": "node.exe",
+    "cli": "node_modules/@earendil-works/pi-coding-agent/dist/cli.js",
+    "shell": false,
+    "childResponse": "PI_GSTACK_SMOKE_RELOADED_OK",
+    "modelRequests": 3
+  }
+}

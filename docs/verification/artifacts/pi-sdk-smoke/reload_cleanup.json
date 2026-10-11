@@ -1,0 +1,41 @@
+{
+  "schema_version": 1,
+  "case": "reload_cleanup",
+  "command": "npm run smoke:pi -- --case reload_cleanup",
+  "sdk_version": "1.1.0",
+  "platform": "win32",
+  "process_exit_codes": [
+    0,
+    0
+  ],
+  "extension_load_errors": 0,
+  "unhandled_errors": 0,
+  "assertions": [
+    {
+      "id": "reloaded_extension_registered",
+      "expected": "After clean shutdown, a second actual Pi process reloads the extension and registers its bridge command.",
+      "observed": "Second Pi process get_commands returned gstack-bridge:status and gstack-bridge:doctor.",
+      "passed": true
+    },
+    {
+      "id": "reloaded_feature_response",
+      "expected": "The reloaded extension in the second actual Pi process executes gstack_pi_agent, receives a successful actual child Pi response, and returns it to the parent.",
+      "observed": "Second process tool result contained PI_GSTACK_SMOKE_RELOADED_OK, child exit_code=0; parent response contained PARENT_OBSERVED_RELOADED_CHILD_OK.",
+      "passed": true
+    },
+    {
+      "id": "clean_shutdown",
+      "expected": "Both sequential Pi RPC processes exit naturally with status 0 after stdin close; neither is killed to satisfy the check and no extension/unhandled/shutdown errors are observed.",
+      "observed": "First process exit=0; second process exit=0; extension load errors=0; unhandled/shutdown errors=0.",
+      "passed": true
+    }
+  ],
+  "observation": {
+    "secondProcessCommand": "gstack-bridge:status",
+    "secondProcessResponse": "PARENT_OBSERVED_RELOADED_CHILD_OK",
+    "processExitCodes": [
+      0,
+      0
+    ]
+  }
+}
