@@ -1,11 +1,24 @@
 import assert from "node:assert/strict";
+import { PassThrough } from "node:stream";
+import { EventEmitter } from "node:events";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import test from "node:test";
-import { assertSemanticAssertions, assertToolResult } from "../scripts/pi-sdk-smoke.mjs";
+import { assertSemanticAssertions, assertToolResult, createHostHarness } from "../scripts/pi-sdk-smoke.mjs";
 
 const root = fileURLToPath(new URL("../", import.meta.url));
+
+function fakePiChild() {
+  const child = new EventEmitter();
+  child.stdout = new PassThrough();
+  child.stderr = new PassThrough();
+  child.stdin = new PassThrough();
+  child.pid = 4321;
+  child.exitCode = null;
+  child.signalCode = null;
+  return child;
+}
 
 test("smoke assertion accepts an observed successful bridge response", () => {
   const events = [{
@@ -33,6 +46,44 @@ test("smoke assertion rejects a deliberately missing feature response", () => {
 test("smoke assertion rejects a deliberately absent reload semantic result", () => {
   const assertions = [{ id: "reloaded_extension_registered", expected: "registered", observed: "missing", passed: false }];
   assert.throws(() => assertSemanticAssertions(assertions, ["reloaded_extension_registered", "reloaded_feature_response"]), /did not pass/u);
+});
+
+test("RPC wait reports an early Pi exit with status, signal, and stderr", async () => {
+  const child = fakePiChild();
+  const harness = createHostHarness(child, "early-exit-test");
+  const response = harness.waitFor((record) => record.type === "response", 1000, "get_state response");
+  child.stderr.write("Pi startup diagnostic");
+  child.exitCode = 7;
+  child.emit("close", 7, null);
+
+  await assert.rejects(response, (error) => {
+    assert.match(error.message, /exited before get_state response/u);
+    assert.match(error.message, /exit=7 signal=null/u);
+    assert.match(error.message, /Pi startup diagnostic/u);
+    return true;
+  });
+  child.stdout.destroy();
+  child.stderr.destroy();
+  child.stdin.destroy();
+});
+
+test("RPC deadline includes current exit status, signal, and captured stderr", async () => {
+  const child = fakePiChild();
+  const harness = createHostHarness(child, "timeout-test");
+  child.stderr.write("Pi startup still running");
+  child.exitCode = 23;
+  child.signalCode = "SIGTERM";
+
+  await assert.rejects(harness.waitFor(() => false, 10, "get_state response"), (error) => {
+    assert.match(error.message, /deadline \(10ms\).*get_state response/u);
+    assert.match(error.message, /exit=23 signal=SIGTERM/u);
+    assert.match(error.message, /Pi startup still running/u);
+    return true;
+  });
+  child.emit("close", 23, "SIGTERM");
+  child.stdout.destroy();
+  child.stderr.destroy();
+  child.stdin.destroy();
 });
 
 test("committed smoke report follows the required Pi behavior contract", async () => {

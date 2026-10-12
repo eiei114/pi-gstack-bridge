@@ -187,7 +187,7 @@ function errorLike(text) {
   return /uncaught exception|unhandled rejection|unhandled error|shutdown error|error during shutdown/iu.test(text);
 }
 
-function createHostHarness(child, scenario) {
+export function createHostHarness(child, scenario) {
   const records = [];
   const protocolErrors = [];
   let stderr = "";
@@ -224,15 +224,30 @@ function createHostHarness(child, scenario) {
     const found = records.find(predicate);
     if (found) return Promise.resolve(found);
     return new Promise((resolve, reject) => {
+      let settled = false;
+      let timer;
+      const finish = (callback, value) => {
+        if (settled) return;
+        settled = true;
+        waiters.delete(waiter);
+        clearTimeout(timer);
+        callback(value);
+      };
       const waiter = {
         predicate,
-        resolve,
-        timer: setTimeout(() => {
-          waiters.delete(waiter);
-          reject(new Error(`Pi RPC deadline (${timeoutMs}ms) while waiting for ${label}; pid=${child.pid}`));
-        }, timeoutMs),
+        resolve: (value) => finish(resolve, value),
+        timer: undefined,
       };
       waiters.add(waiter);
+      timer = setTimeout(() => finish(
+        reject,
+        new Error(`Pi RPC deadline (${timeoutMs}ms) while waiting for ${label}; pid=${child.pid} exit=${child.exitCode} signal=${child.signalCode}\nstderr:\n${stderr}`),
+      ), timeoutMs);
+      waiter.timer = timer;
+      closePromise.then(({ code, signal }) => finish(
+        reject,
+        new Error(`Pi RPC process exited before ${label}; exit=${code} signal=${signal}\nstderr:\n${stderr}`),
+      ));
     });
   }
 
