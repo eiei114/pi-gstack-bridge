@@ -12,6 +12,8 @@ const PI_CLI = path.join(ROOT, "node_modules", "@earendil-works", "pi-coding-age
 const REPORT_PATH = path.join(ROOT, "docs", "verification", "pi-sdk-smoke.json");
 const ARTIFACT_DIR = path.join(ROOT, "docs", "verification", "artifacts", "pi-sdk-smoke");
 const SHORT_TIMEOUT_MS = 15_000;
+// Windows Actions showed the live Pi process can take longer than the normal request deadline to emit its first state response.
+const STARTUP_TIMEOUT_MS = 30_000;
 const TOOL_TIMEOUT_MS = 25_000;
 const CLEANUP_TIMEOUT_MS = 1_000;
 const SDK_VERSIONS = {
@@ -389,7 +391,7 @@ async function startCase(scenario) {
   const start = async () => {
     const harness = await startHost(tempRoot, model, scenario);
     hosts.push(harness);
-    const state = await harness.request("get_state");
+    const state = await harness.request("get_state", {}, STARTUP_TIMEOUT_MS);
     assert.equal(state.model?.provider, "pi-gstack-smoke", "Pi did not use the isolated offline model");
     assert.equal(state.model?.id, "smoke-model");
     return harness;
