@@ -1,0 +1,101 @@
+{
+  "schema_version": 1,
+  "verification_contract": "pi-sdk-behavior-v2",
+  "sdk_versions": {
+    "@earendil-works/pi-agent-core": "1.1.0",
+    "@earendil-works/pi-ai": "1.1.0",
+    "@earendil-works/pi-coding-agent": "1.1.0",
+    "@earendil-works/pi-tui": "1.1.0"
+  },
+  "unhandled_errors": 0,
+  "extension_load_errors": 0,
+  "cases": [
+    {
+      "name": "extension_load",
+      "command": "npm run smoke:pi -- --case extension_load",
+      "exit_code": 0,
+      "passed": true,
+      "evidence": "docs/verification/artifacts/pi-sdk-smoke/extension_load.json",
+      "assertions": [
+        {
+          "id": "extension_registered",
+          "expected": "Pi 1.1.0 loads the actual package extension and registers gstack-bridge:status and gstack-bridge:doctor.",
+          "observed": "get_commands returned gstack-bridge:status and gstack-bridge:doctor from a live Pi RPC host.",
+          "passed": true
+        }
+      ]
+    },
+    {
+      "name": "happy_path",
+      "command": "npm run smoke:pi -- --case happy_path",
+      "exit_code": 0,
+      "passed": true,
+      "evidence": "docs/verification/artifacts/pi-sdk-smoke/happy_path.json",
+      "assertions": [
+        {
+          "id": "feature_response",
+          "expected": "The registered gstack_pi_agent tool launches a real Pi child; its result is returned as a handled tool response and observed by the parent model.",
+          "observed": "The tool result contained PI_GSTACK_SMOKE_CHILD_OK; child exit_code=0; parent response contained PARENT_OBSERVED_BRIDGE_CHILD_OK.",
+          "passed": true
+        }
+      ]
+    },
+    {
+      "name": "error_path",
+      "command": "npm run smoke:pi -- --case error_path",
+      "exit_code": 0,
+      "passed": true,
+      "evidence": "docs/verification/artifacts/pi-sdk-smoke/error_path.json",
+      "assertions": [
+        {
+          "id": "handled_error",
+          "expected": "An empty task is handled by the real extension as a non-error tool result; Pi remains responsive and the parent observes that result.",
+          "observed": "tool_execution_end isError=false with \"No child task was provided.\"; parent response contained PARENT_OBSERVED_HANDLED_ERROR.",
+          "passed": true
+        }
+      ]
+    },
+    {
+      "name": "reload_cleanup",
+      "command": "npm run smoke:pi -- --case reload_cleanup",
+      "exit_code": 0,
+      "passed": true,
+      "evidence": "docs/verification/artifacts/pi-sdk-smoke/reload_cleanup.json",
+      "assertions": [
+        {
+          "id": "reloaded_extension_registered",
+          "expected": "After clean shutdown, a second actual Pi process reloads the extension and registers its bridge command.",
+          "observed": "Second Pi process get_commands returned gstack-bridge:status and gstack-bridge:doctor.",
+          "passed": true
+        },
+        {
+          "id": "reloaded_feature_response",
+          "expected": "The reloaded extension in the second actual Pi process executes gstack_pi_agent, receives a successful actual child Pi response, and returns it to the parent.",
+          "observed": "Second process tool result contained PI_GSTACK_SMOKE_RELOADED_OK, child exit_code=0; parent response contained PARENT_OBSERVED_RELOADED_CHILD_OK.",
+          "passed": true
+        },
+        {
+          "id": "clean_shutdown",
+          "expected": "Both sequential Pi RPC processes exit naturally with status 0 after stdin close; neither is killed to satisfy the check and no extension/unhandled/shutdown errors are observed.",
+          "observed": "First process exit=0; second process exit=0; extension load errors=0; unhandled/shutdown errors=0.",
+          "passed": true
+        }
+      ]
+    },
+    {
+      "name": "host_shell",
+      "command": "npm run smoke:pi -- --case host_shell",
+      "exit_code": 0,
+      "passed": true,
+      "evidence": "docs/verification/artifacts/pi-sdk-smoke/host_shell.json",
+      "assertions": [
+        {
+          "id": "native_shell_boundary",
+          "expected": "The actual bridge child executes the installed Pi 1.1.0 CLI through process.execPath with shell=false and returns a handled feature response; on Windows this bypasses pi.cmd.",
+          "observed": "win32: executable=node.exe, cli=node_modules/@earendil-works/pi-coding-agent/dist/cli.js, shell=false; child response contained PI_GSTACK_SMOKE_RELOADED_OK.",
+          "passed": true
+        }
+      ]
+    }
+  ]
+}

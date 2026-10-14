@@ -1,0 +1,25 @@
+{
+  "schema_version": 1,
+  "case": "error_path",
+  "command": "npm run smoke:pi -- --case error_path",
+  "sdk_version": "1.1.0",
+  "platform": "win32",
+  "process_exit_codes": [
+    0
+  ],
+  "extension_load_errors": 0,
+  "unhandled_errors": 0,
+  "assertions": [
+    {
+      "id": "handled_error",
+      "expected": "An empty task is handled by the real extension as a non-error tool result; Pi remains responsive and the parent observes that result.",
+      "observed": "tool_execution_end isError=false with \"No child task was provided.\"; parent response contained PARENT_OBSERVED_HANDLED_ERROR.",
+      "passed": true
+    }
+  ],
+  "observation": {
+    "parentResponse": "PARENT_OBSERVED_HANDLED_ERROR",
+    "toolResponse": "No child task was provided.",
+    "modelRequests": 2
+  }
+}

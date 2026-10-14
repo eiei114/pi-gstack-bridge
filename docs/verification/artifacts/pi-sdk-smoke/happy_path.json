@@ -1,0 +1,25 @@
+{
+  "schema_version": 1,
+  "case": "happy_path",
+  "command": "npm run smoke:pi -- --case happy_path",
+  "sdk_version": "1.1.0",
+  "platform": "win32",
+  "process_exit_codes": [
+    0
+  ],
+  "extension_load_errors": 0,
+  "unhandled_errors": 0,
+  "assertions": [
+    {
+      "id": "feature_response",
+      "expected": "The registered gstack_pi_agent tool launches a real Pi child; its result is returned as a handled tool response and observed by the parent model.",
+      "observed": "The tool result contained PI_GSTACK_SMOKE_CHILD_OK; child exit_code=0; parent response contained PARENT_OBSERVED_BRIDGE_CHILD_OK.",
+      "passed": true
+    }
+  ],
+  "observation": {
+    "parentResponse": "PARENT_OBSERVED_BRIDGE_CHILD_OK",
+    "toolResponse": "PI_GSTACK_SMOKE_CHILD_OK",
+    "modelRequests": 3
+  }
+}

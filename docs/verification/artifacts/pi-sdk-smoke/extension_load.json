@@ -1,0 +1,26 @@
+{
+  "schema_version": 1,
+  "case": "extension_load",
+  "command": "npm run smoke:pi -- --case extension_load",
+  "sdk_version": "1.1.0",
+  "platform": "win32",
+  "process_exit_codes": [
+    0
+  ],
+  "extension_load_errors": 0,
+  "unhandled_errors": 0,
+  "assertions": [
+    {
+      "id": "extension_registered",
+      "expected": "Pi 1.1.0 loads the actual package extension and registers gstack-bridge:status and gstack-bridge:doctor.",
+      "observed": "get_commands returned gstack-bridge:status and gstack-bridge:doctor from a live Pi RPC host.",
+      "passed": true
+    }
+  ],
+  "observation": {
+    "registeredCommands": [
+      "gstack-bridge:status",
+      "gstack-bridge:doctor"
+    ]
+  }
+}
