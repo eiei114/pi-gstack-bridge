@@ -93,7 +93,7 @@ test("committed smoke report follows the required Pi behavior contract", async (
   assert.equal(report.unhandled_errors, 0);
   assert.equal(report.extension_load_errors, 0);
   for (const name of ["pi-agent-core", "pi-ai", "pi-coding-agent", "pi-tui"]) {
-    assert.equal(report.sdk_versions[`@earendil-works/${name}`], "1.1.0");
+    assert.equal(report.sdk_versions[`@earendil-works/${name}`], "1.2.0");
   }
   assert.deepEqual(report.cases.map((entry) => entry.name), ["extension_load", "happy_path", "error_path", "reload_cleanup", "host_shell"]);
   for (const entry of report.cases) {

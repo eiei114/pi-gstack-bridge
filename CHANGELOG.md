@@ -2,7 +2,11 @@
 
 ## Unreleased
 
-- Pin Pi SDK development dependencies to 1.1.0 and run live extension compatibility smoke cases in CI on Linux and Windows.
+## [0.1.4] - 2026-10-16
+
+### Changed
+
+- Pin Pi SDK development dependencies to 1.2.0 and run live extension compatibility smoke cases in CI on Linux and Windows.
 
 ## 0.1.2 - 2026-09-27
 
