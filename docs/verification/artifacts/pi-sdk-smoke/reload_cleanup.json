@@ -2,7 +2,7 @@
   "schema_version": 1,
   "case": "reload_cleanup",
   "command": "npm run smoke:pi -- --case reload_cleanup",
-  "sdk_version": "1.1.0",
+  "sdk_version": "1.2.0",
   "platform": "win32",
   "process_exit_codes": [
     0,

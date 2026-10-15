@@ -17,10 +17,10 @@ const STARTUP_TIMEOUT_MS = 30_000;
 const TOOL_TIMEOUT_MS = 25_000;
 const CLEANUP_TIMEOUT_MS = 1_000;
 const SDK_VERSIONS = {
-  "@earendil-works/pi-agent-core": "1.1.0",
-  "@earendil-works/pi-ai": "1.1.0",
-  "@earendil-works/pi-coding-agent": "1.1.0",
-  "@earendil-works/pi-tui": "1.1.0",
+  "@earendil-works/pi-agent-core": "1.2.0",
+  "@earendil-works/pi-ai": "1.2.0",
+  "@earendil-works/pi-coding-agent": "1.2.0",
+  "@earendil-works/pi-tui": "1.2.0",
 };
 const CASE_NAMES = ["extension_load", "happy_path", "error_path", "reload_cleanup", "host_shell"];
 const SEMANTIC_IDS = {
@@ -422,7 +422,7 @@ async function startCase(scenario) {
       observed.registeredCommands = names.filter((name) => name.startsWith("gstack-bridge:"));
       assertions.push({
         id: "extension_registered",
-        expected: "Pi 1.1.0 loads the actual package extension and registers gstack-bridge:status and gstack-bridge:doctor.",
+        expected: "Pi 1.2.0 loads the actual package extension and registers gstack-bridge:status and gstack-bridge:doctor.",
         observed: `get_commands returned ${observed.registeredCommands.join(" and ")} from a live Pi RPC host.`,
         passed: true,
       });
@@ -468,7 +468,7 @@ async function startCase(scenario) {
         observed.childResponse = expectedToolText;
         assertions.push({
           id: "native_shell_boundary",
-          expected: "The actual bridge child executes the installed Pi 1.1.0 CLI through process.execPath with shell=false and returns a handled feature response; on Windows this bypasses pi.cmd.",
+          expected: "The actual bridge child executes the installed Pi 1.2.0 CLI through process.execPath with shell=false and returns a handled feature response; on Windows this bypasses pi.cmd.",
           observed: `${process.platform}: executable=${observed.launchCommand}, cli=${observed.cli}, shell=${launchPlan.shell}; child response contained ${expectedToolText}.`,
           passed: true,
         });

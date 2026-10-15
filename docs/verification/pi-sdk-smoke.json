@@ -2,10 +2,10 @@
   "schema_version": 1,
   "verification_contract": "pi-sdk-behavior-v2",
   "sdk_versions": {
-    "@earendil-works/pi-agent-core": "1.1.0",
-    "@earendil-works/pi-ai": "1.1.0",
-    "@earendil-works/pi-coding-agent": "1.1.0",
-    "@earendil-works/pi-tui": "1.1.0"
+    "@earendil-works/pi-agent-core": "1.2.0",
+    "@earendil-works/pi-ai": "1.2.0",
+    "@earendil-works/pi-coding-agent": "1.2.0",
+    "@earendil-works/pi-tui": "1.2.0"
   },
   "unhandled_errors": 0,
   "extension_load_errors": 0,
@@ -19,7 +19,7 @@
       "assertions": [
         {
           "id": "extension_registered",
-          "expected": "Pi 1.1.0 loads the actual package extension and registers gstack-bridge:status and gstack-bridge:doctor.",
+          "expected": "Pi 1.2.0 loads the actual package extension and registers gstack-bridge:status and gstack-bridge:doctor.",
           "observed": "get_commands returned gstack-bridge:status and gstack-bridge:doctor from a live Pi RPC host.",
           "passed": true
         }
@@ -91,7 +91,7 @@
       "assertions": [
         {
           "id": "native_shell_boundary",
-          "expected": "The actual bridge child executes the installed Pi 1.1.0 CLI through process.execPath with shell=false and returns a handled feature response; on Windows this bypasses pi.cmd.",
+          "expected": "The actual bridge child executes the installed Pi 1.2.0 CLI through process.execPath with shell=false and returns a handled feature response; on Windows this bypasses pi.cmd.",
           "observed": "win32: executable=node.exe, cli=node_modules/@earendil-works/pi-coding-agent/dist/cli.js, shell=false; child response contained PI_GSTACK_SMOKE_RELOADED_OK.",
           "passed": true
         }
