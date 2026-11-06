@@ -16,12 +16,12 @@ const SHORT_TIMEOUT_MS = 15_000;
 const STARTUP_TIMEOUT_MS = 30_000;
 const TOOL_TIMEOUT_MS = 25_000;
 const CLEANUP_TIMEOUT_MS = 1_000;
-const SDK_VERSIONS = {
-  "@earendil-works/pi-agent-core": "1.2.0",
-  "@earendil-works/pi-ai": "1.2.0",
-  "@earendil-works/pi-coding-agent": "1.2.0",
-  "@earendil-works/pi-tui": "1.2.0",
-};
+const SDK_PACKAGE_NAMES = [
+  "@earendil-works/pi-agent-core",
+  "@earendil-works/pi-ai",
+  "@earendil-works/pi-coding-agent",
+  "@earendil-works/pi-tui",
+];
 const CASE_NAMES = ["extension_load", "happy_path", "error_path", "reload_cleanup", "host_shell"];
 const SEMANTIC_IDS = {
   extension_load: ["extension_registered"],
@@ -422,7 +422,7 @@ async function startCase(scenario) {
       observed.registeredCommands = names.filter((name) => name.startsWith("gstack-bridge:"));
       assertions.push({
         id: "extension_registered",
-        expected: "Pi 1.2.0 loads the actual package extension and registers gstack-bridge:status and gstack-bridge:doctor.",
+        expected: "The pinned Pi CLI loads the actual package extension and registers gstack-bridge:status and gstack-bridge:doctor.",
         observed: `get_commands returned ${observed.registeredCommands.join(" and ")} from a live Pi RPC host.`,
         passed: true,
       });
@@ -459,7 +459,7 @@ async function startCase(scenario) {
           ? String(launchPlan.command).toLowerCase() === process.execPath.toLowerCase()
           : launchPlan.command === process.execPath;
         assert.equal(sameExecutable, true, `bridge did not execute the pinned Pi CLI through Node: ${JSON.stringify(launchPlan)}`);
-        assert.ok(launchPlan.argsPrefix.some((argument) => path.resolve(argument) === path.resolve(PI_CLI)), `launch plan did not select installed Pi 1.1.0 CLI: ${JSON.stringify(launchPlan)}`);
+        assert.ok(launchPlan.argsPrefix.some((argument) => path.resolve(argument) === path.resolve(PI_CLI)), `launch plan did not select the installed pinned Pi CLI: ${JSON.stringify(launchPlan)}`);
         assert.equal(launchPlan.shell, false, "bridge used a shell or Windows .cmd wrapper instead of native Node process launch");
         observed.platform = process.platform;
         observed.launchCommand = path.basename(launchPlan.command);
@@ -468,7 +468,7 @@ async function startCase(scenario) {
         observed.childResponse = expectedToolText;
         assertions.push({
           id: "native_shell_boundary",
-          expected: "The actual bridge child executes the installed Pi 1.2.0 CLI through process.execPath with shell=false and returns a handled feature response; on Windows this bypasses pi.cmd.",
+          expected: "The actual bridge child executes the installed pinned Pi CLI through process.execPath with shell=false and returns a handled feature response; on Windows this bypasses pi.cmd.",
           observed: `${process.platform}: executable=${observed.launchCommand}, cli=${observed.cli}, shell=${launchPlan.shell}; child response contained ${expectedToolText}.`,
           passed: true,
         });
@@ -538,24 +538,27 @@ async function startCase(scenario) {
 async function assertPinnedDependencies() {
   const pkg = JSON.parse(await readFile(path.join(ROOT, "package.json"), "utf8"));
   const lock = JSON.parse(await readFile(path.join(ROOT, "package-lock.json"), "utf8"));
-  const installed = JSON.parse(await readFile(path.join(ROOT, "node_modules", "@earendil-works", "pi-coding-agent", "package.json"), "utf8"));
-  assert.deepEqual(installed.version, SDK_VERSIONS["@earendil-works/pi-coding-agent"], "smoke must execute the exact frozen Pi CLI version");
-  for (const [name, version] of Object.entries(SDK_VERSIONS)) {
+  const sdkVersions = Object.fromEntries(SDK_PACKAGE_NAMES.map((name) => [name, pkg.devDependencies[name]]));
+  for (const [name, version] of Object.entries(sdkVersions)) {
+    assert.match(version, /^\d+\.\d+\.\d+$/u, `${name} must be an exact devDependency pin`);
     assert.equal(pkg.devDependencies[name], version, `${name} must be an exact devDependency pin`);
     assert.equal(lock.packages[""].devDependencies[name], version, `${name} lock root does not match the frozen pin`);
     assert.equal(lock.packages[`node_modules/${name}`].version, version, `${name} installed lock entry is not frozen`);
   }
-  return installed.version;
+  const installed = JSON.parse(await readFile(path.join(ROOT, "node_modules", "@earendil-works", "pi-coding-agent", "package.json"), "utf8"));
+  const piCliVersion = sdkVersions["@earendil-works/pi-coding-agent"];
+  assert.equal(installed.version, piCliVersion, "smoke must execute the exact frozen Pi CLI version");
+  return sdkVersions;
 }
 
-async function recordResults(sdkVersion, cases) {
+async function recordResults(sdkVersions, cases) {
   await mkdir(ARTIFACT_DIR, { recursive: true });
   for (const result of cases) {
     const artifact = {
       schema_version: 1,
       case: result.name,
       command: result.command,
-      sdk_version: sdkVersion,
+      sdk_version: sdkVersions["@earendil-works/pi-coding-agent"],
       platform: result.platform,
       process_exit_codes: result.process_exit_codes,
       extension_load_errors: result.extension_load_errors,
@@ -568,7 +571,7 @@ async function recordResults(sdkVersion, cases) {
   const report = {
     schema_version: 1,
     verification_contract: "pi-sdk-behavior-v2",
-    sdk_versions: SDK_VERSIONS,
+    sdk_versions: sdkVersions,
     unhandled_errors: cases.reduce((sum, result) => sum + result.unhandled_errors, 0),
     extension_load_errors: cases.reduce((sum, result) => sum + result.extension_load_errors, 0),
     cases: cases.map(({ name, command, exit_code, passed, evidence, assertions }) => ({ name, command, exit_code, passed, evidence, assertions })),
@@ -583,7 +586,8 @@ async function main(args) {
   const selectedCase = caseIndex >= 0 ? args[caseIndex + 1] : undefined;
   if (record && selectedCase) throw new Error("--record requires running all five cases; omit --case");
   if (selectedCase && !CASE_NAMES.includes(selectedCase)) throw new Error(`Unknown smoke case ${selectedCase}; expected one of ${CASE_NAMES.join(", ")}`);
-  const sdkVersion = await assertPinnedDependencies();
+  const sdkVersions = await assertPinnedDependencies();
+  const sdkVersion = sdkVersions["@earendil-works/pi-coding-agent"];
   const selected = selectedCase ? [selectedCase] : CASE_NAMES;
   const cases = [];
   for (const name of selected) {
@@ -591,7 +595,7 @@ async function main(args) {
     process.stdout.write(`PASS ${name}\n`);
   }
   if (record) {
-    const report = await recordResults(sdkVersion, cases);
+    const report = await recordResults(sdkVersions, cases);
     process.stdout.write(`${JSON.stringify(report, null, 2)}\n`);
   } else {
     for (const result of cases) assertSemanticAssertions(result.assertions, SEMANTIC_IDS[result.name]);

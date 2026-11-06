@@ -88,12 +88,14 @@ test("RPC deadline includes current exit status, signal, and captured stderr", a
 
 test("committed smoke report follows the required Pi behavior contract", async () => {
   const report = JSON.parse(await readFile(path.join(root, "docs", "verification", "pi-sdk-smoke.json"), "utf8"));
+  const pkg = JSON.parse(await readFile(path.join(root, "package.json"), "utf8"));
   assert.equal(report.schema_version, 1);
   assert.equal(report.verification_contract, "pi-sdk-behavior-v2");
   assert.equal(report.unhandled_errors, 0);
   assert.equal(report.extension_load_errors, 0);
   for (const name of ["pi-agent-core", "pi-ai", "pi-coding-agent", "pi-tui"]) {
-    assert.equal(report.sdk_versions[`@earendil-works/${name}`], "1.2.0");
+    const packageName = `@earendil-works/${name}`;
+    assert.equal(report.sdk_versions[packageName], pkg.devDependencies[packageName]);
   }
   assert.deepEqual(report.cases.map((entry) => entry.name), ["extension_load", "happy_path", "error_path", "reload_cleanup", "host_shell"]);
   for (const entry of report.cases) {

@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+## [0.1.5] - 2026-11-07
+
+### Fixed
+
+- Derive Pi SDK smoke expectations from the exact development dependency pins so compatible SDK updates do not fail against stale hard-coded versions.
+
 ## [0.1.4] - 2026-10-16
 
 ### Changed

@@ -1,8 +1,8 @@
-# Pi SDK 1.2.0 runtime smoke
+# Pinned Pi SDK runtime smoke
 
 Run `npm ci` followed by `npm run smoke:pi`. To refresh the committed behavior report and per-case evidence after a successful run, use `node scripts/pi-sdk-smoke.mjs --record`.
 
-The harness starts the installed Pi 1.2.0 CLI as an actual JSON-RPC host with this package's extension loaded. It observes extension command registration, drives the registered bridge tool through Pi's real agent/tool lifecycle, and verifies that the bridge launches a second actual Pi CLI process and returns that process's response. Reload is checked by cleanly stopping one host and verifying registration and a successful bridge response from a second host. Process exit codes, extension errors, RPC protocol output, and unhandled/shutdown diagnostics are asserted.
+The harness starts the exact Pi CLI version pinned by this package's development dependencies as an actual JSON-RPC host with this package's extension loaded. It observes extension command registration, drives the registered bridge tool through Pi's real agent/tool lifecycle, and verifies that the bridge launches a second actual Pi CLI process and returns that process's response. Reload is checked by cleanly stopping one host and verifying registration and a successful bridge response from a second host. Process exit codes, extension errors, RPC protocol output, and unhandled/shutdown diagnostics are asserted.
 
 A local OpenAI-compatible test endpoint supplies deterministic offline completions so the checks make no paid or external inference calls. Only model responses are predetermined: the Pi host and child processes, SDK, extension loader, bridge tool execution, child launch, and lifecycle are not mocked. Each Pi RPC operation has a bounded deadline; cleanup has a separate one-second deadline. Pi configuration, sessions, and bridge run files live in temporary directories, not the user's global Pi settings.
 
