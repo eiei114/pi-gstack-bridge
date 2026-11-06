@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+## [0.1.6] - 2026-11-07
+
+### Changed
+
+- Pin the Pi SDK development dependencies to 1.5.0 and verify the bridge against the actual Pi host.
+
 ## [0.1.5] - 2026-11-07
 
 ### Fixed
