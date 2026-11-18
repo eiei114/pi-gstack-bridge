@@ -1,9 +1,6 @@
 const MODEL_CLI_NAMES = "codex|claude|gemini";
 
-export function directModelCli(command: string): string | undefined {
-  const text = command.trim();
-  if (!text) return undefined;
-
+function matchDirectModelCli(text: string): string | undefined {
   const lookup = new RegExp(`\\b(?:command\\s+-v|which|where)\\s+(${MODEL_CLI_NAMES})(?:\\.exe)?\\b`, "iu");
   const lookupMatch = text.match(lookup);
   if (lookupMatch) return lookupMatch[1];
@@ -16,11 +13,76 @@ export function directModelCli(command: string): string | undefined {
   if (bareMatch) return bareMatch[1];
 
   const invocation = new RegExp(
-    `(?:^|[;&|\\n]\\s*|\\b(?:env|timeout|nohup|command)\\s+)(?:[^;&|\\n]*?\\s+)?\\b(${MODEL_CLI_NAMES})(?:\\.exe)?\\s+(?:exec|review|run|chat|login|--version|--help|-p|--prompt|--model|--dangerously-skip-permissions)\\b`,
+    `(?:^|[;&|\\n]\\s*|\\b(?:env|timeout|nohup|command)\\s+)(?:[^;&|\\n]*?\\s+)?\\b(${MODEL_CLI_NAMES})(?:\\.exe)?\\s+(?:exec|review|run|chat|login|--version|--help|-p|--prompt|--print|--model|--dangerously-skip-permissions)\\b`,
     "iu",
   );
   const invocationMatch = text.match(invocation);
   return invocationMatch?.[1];
+}
+
+function extractQuotedSegment(text: string, start: number): { content: string; end: number } | undefined {
+  const quote = text[start];
+  if (quote !== "\"" && quote !== "'") return undefined;
+  let content = "";
+  for (let i = start + 1; i < text.length; i++) {
+    const ch = text[i];
+    if (ch === "\\" && i + 1 < text.length) {
+      content += text[i + 1];
+      i++;
+      continue;
+    }
+    if (ch === quote) return { content, end: i + 1 };
+    content += ch;
+  }
+  return { content, end: text.length };
+}
+
+function unwrapShellSegments(text: string): string[] {
+  const segments: string[] = [];
+  const wrappers = [
+    /\b(?:bash|sh)\b(?:\s+-[^\s"']*)*\s+-[a-z]*c\b\s*/giu,
+    /\b(?:powershell(?:\.exe)?|pwsh(?:\.exe)?)\b(?:\s+-[^\s"']*)*\s+(?:-Command|-c)\b\s*/giu,
+    /\bcmd(?:\.exe)?\b\s+\/c\b\s*/giu,
+  ];
+
+  for (const wrapper of wrappers) {
+    let match: RegExpExecArray | null;
+    wrapper.lastIndex = 0;
+    while ((match = wrapper.exec(text)) !== null) {
+      let i = wrapper.lastIndex;
+      while (i < text.length && /\s/u.test(text[i]!)) i++;
+      if (i >= text.length) continue;
+      const quoted = extractQuotedSegment(text, i);
+      const content = quoted ? quoted.content : text.slice(i);
+      const trimmed = content.trim();
+      if (trimmed) segments.push(trimmed);
+      wrapper.lastIndex = quoted ? quoted.end : text.length;
+    }
+  }
+
+  return segments;
+}
+
+export function directModelCli(command: string): string | undefined {
+  const text = command.trim();
+  if (!text) return undefined;
+
+  const seen = new Set<string>();
+  const stack = [text];
+  while (stack.length > 0) {
+    const current = stack.pop()!;
+    if (seen.has(current)) continue;
+    seen.add(current);
+
+    const match = matchDirectModelCli(current);
+    if (match) return match;
+
+    for (const segment of unwrapShellSegments(current)) {
+      if (!seen.has(segment)) stack.push(segment);
+    }
+  }
+
+  return undefined;
 }
 
 export function directModelCliReason(command: string): string | undefined {
