@@ -6,7 +6,7 @@ function matchDirectModelCli(text: string): string | undefined {
   if (lookupMatch) return lookupMatch[1];
 
   const bareInvocation = new RegExp(
-    `(?:^|[;&|\\n]\\s*)\\b(${MODEL_CLI_NAMES})(?:\\.exe)?(?=\\s*(?:\\d*>>?|&>|$))`,
+    `(?:^|[;&|\\n]\\s*)\\b(${MODEL_CLI_NAMES})(?:\\.exe)?(?=\\s*(?:\\\\?["'])*(?:\\d*>>?|&>|$))`,
     "iu",
   );
   const bareMatch = text.match(bareInvocation);
@@ -20,18 +20,45 @@ function matchDirectModelCli(text: string): string | undefined {
   return invocationMatch?.[1];
 }
 
-function extractQuotedSegment(text: string, start: number): { content: string; end: number } | undefined {
-  const quote = text[start];
-  if (quote !== "\"" && quote !== "'") return undefined;
+function extractShellArgument(text: string, start: number): { content: string; end: number } {
+  if (text[start] !== "\"" && text[start] !== "'") {
+    return { content: text.slice(start), end: text.length };
+  }
+
   let content = "";
-  for (let i = start + 1; i < text.length; i++) {
+  let quote: "\"" | "'" | undefined;
+  for (let i = start; i < text.length; i++) {
     const ch = text[i];
+    if (quote === "'") {
+      if (ch === "'") quote = undefined;
+      else content += ch;
+      continue;
+    }
+
+    if (quote === "\"") {
+      if (ch === "\"") {
+        quote = undefined;
+        continue;
+      }
+      if (ch === "\\" && i + 1 < text.length && /[\\"$`\n]/u.test(text[i + 1]!)) {
+        content += text[i + 1];
+        i++;
+        continue;
+      }
+      content += ch;
+      continue;
+    }
+
+    if (/\s/u.test(ch)) return { content, end: i };
+    if (ch === "'" || ch === "\"") {
+      quote = ch;
+      continue;
+    }
     if (ch === "\\" && i + 1 < text.length) {
       content += text[i + 1];
       i++;
       continue;
     }
-    if (ch === quote) return { content, end: i + 1 };
     content += ch;
   }
   return { content, end: text.length };
@@ -40,9 +67,9 @@ function extractQuotedSegment(text: string, start: number): { content: string; e
 function unwrapShellSegments(text: string): string[] {
   const segments: string[] = [];
   const wrappers = [
-    /\b(?:bash|sh)\b(?:\s+-[^\s"']*)*\s+-[a-z]*c\b\s*/giu,
-    /\b(?:powershell(?:\.exe)?|pwsh(?:\.exe)?)\b(?:\s+-[^\s"']*)*\s+(?:-Command|-c)\b\s*/giu,
-    /\bcmd(?:\.exe)?\b\s+\/c\b\s*/giu,
+    /(?:^|[;&|\n]\s*)(?:(?:env|timeout|nohup|command)\s+(?:[^\s"';&|]+\s+)*?)?\b(?:bash|sh)\b(?:\s+-[^\s"']*)*\s+-[a-z]*c\b\s*/giu,
+    /(?:^|[;&|\n]\s*)(?:(?:env|timeout|nohup|command)\s+(?:[^\s"';&|]+\s+)*?)?\b(?:powershell(?:\.exe)?|pwsh(?:\.exe)?)\b(?:\s+-[^\s"']*)*\s+(?:-Command|-c)\b\s*/giu,
+    /(?:^|[;&|\n]\s*)(?:(?:env|timeout|nohup|command)\s+(?:[^\s"';&|]+\s+)*?)?\bcmd(?:\.exe)?\b\s+\/c\b\s*/giu,
   ];
 
   for (const wrapper of wrappers) {
@@ -52,11 +79,11 @@ function unwrapShellSegments(text: string): string[] {
       let i = wrapper.lastIndex;
       while (i < text.length && /\s/u.test(text[i]!)) i++;
       if (i >= text.length) continue;
-      const quoted = extractQuotedSegment(text, i);
-      const content = quoted ? quoted.content : text.slice(i);
+      const argument = extractShellArgument(text, i);
+      const content = argument.content;
       const trimmed = content.trim();
       if (trimmed) segments.push(trimmed);
-      wrapper.lastIndex = quoted ? quoted.end : text.length;
+      wrapper.lastIndex = argument.end;
     }
   }
 
