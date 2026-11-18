@@ -80,3 +80,16 @@ test("detects npm and gh mutations while leaving read-only commands allowed", ()
   assert.equal(mutatingShellCommand("npm --prefix pkg run ci"), undefined);
   assert.equal(mutatingShellCommand("gh pr view 12"), undefined);
 });
+
+test("does not match mutation words inside option values or inspection text", () => {
+  assert.equal(mutatingShellCommand("git -C 'repo reset archive' status"), undefined);
+  assert.equal(mutatingShellCommand("git --git-dir='/repo reset' status"), undefined);
+  assert.equal(mutatingShellCommand("npm --prefix 'pkg install sandbox' ls"), undefined);
+  assert.equal(mutatingShellCommand("grep -F 'gh pr merge' README.txt"), undefined);
+});
+
+test("detects mutations at command boundaries in chained shell commands", () => {
+  assert.equal(mutatingShellCommand("echo ok && git -C 'sub dir' reset --hard"), "git mutation");
+  assert.equal(mutatingShellCommand("cd repo; npm --prefix 'pkg dir' publish"), "package mutation");
+  assert.equal(mutatingShellCommand("printf example | gh pr merge 12"), "GitHub mutation");
+});
