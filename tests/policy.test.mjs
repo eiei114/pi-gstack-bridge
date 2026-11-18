@@ -57,3 +57,26 @@ test("classifies common read-only child mutations", () => {
   assert.equal(mutatingShellCommand("printf test > output.txt"), "shell redirection");
   assert.equal(mutatingShellCommand("npm install"), "package mutation");
 });
+
+test("detects git mutations after global options and stash subcommands", () => {
+  assert.equal(mutatingShellCommand("git -C sub reset --hard HEAD"), "git mutation");
+  assert.equal(mutatingShellCommand("git --git-dir=/repo stash drop"), "git mutation");
+  assert.equal(mutatingShellCommand("git --no-pager clean -fd"), "git mutation");
+  assert.equal(mutatingShellCommand("git -c core.quotepath=false stash drop"), "git mutation");
+  assert.equal(mutatingShellCommand("git -C sub --no-pager reset --hard"), "git mutation");
+});
+
+test("detects npm and gh mutations while leaving read-only commands allowed", () => {
+  assert.equal(mutatingShellCommand("npm --prefix pkg publish"), "package mutation");
+  assert.equal(mutatingShellCommand("npm --prefix=pkg install"), "package mutation");
+  assert.equal(mutatingShellCommand("gh pr merge 12"), "GitHub mutation");
+  assert.equal(mutatingShellCommand("gh pr close 12"), "GitHub mutation");
+  assert.equal(mutatingShellCommand("gh release create v1.2.3"), "GitHub mutation");
+
+  assert.equal(mutatingShellCommand("git status --short"), undefined);
+  assert.equal(mutatingShellCommand("git diff --stat"), undefined);
+  assert.equal(mutatingShellCommand("git log -1"), undefined);
+  assert.equal(mutatingShellCommand("npm run ci"), undefined);
+  assert.equal(mutatingShellCommand("npm --prefix pkg run ci"), undefined);
+  assert.equal(mutatingShellCommand("gh pr view 12"), undefined);
+});

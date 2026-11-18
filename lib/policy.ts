@@ -126,8 +126,15 @@ export function mutatingShellCommand(command: string): string | undefined {
     [/\b(?:rm|rmdir|del|erase)\b/iu, "delete command"],
     [/\b(?:mv|move|cp|copy|touch|mkdir|md|chmod|chown)\b/iu, "filesystem mutation"],
     [/>\s*>?/u, "shell redirection"],
-    [/\b(?:git\s+(?:reset|clean|checkout|restore|switch|commit|merge|rebase|cherry-pick|apply|push|tag))\b/iu, "git mutation"],
-    [/\b(?:npm|pnpm|yarn|bun)\s+(?:install|add|remove|uninstall|publish|version)\b/iu, "package mutation"],
+    [
+      /\bgit\s+(?:(?:(?:-C\s+|--git-dir\s+|-c\s+)(?:"[^"]*"|'[^']*'|\S+)|--git-dir=\S+|--no-pager)\s+)*(?:reset|clean|checkout|restore|switch|commit|merge|rebase|cherry-pick|apply|push|tag|stash\s+(?:apply|clear|drop|pop|push|save|store))\b/iu,
+      "git mutation",
+    ],
+    [
+      /\b(?:npm(?:\s+--prefix(?:=|\s+)(?:"[^"]*"|'[^']*'|\S+))*|pnpm|yarn|bun)\s+(?:install|add|remove|uninstall|publish|version)\b/iu,
+      "package mutation",
+    ],
+    [/\bgh\s+(?:pr\s+(?:merge|close)|release\s+create)\b/iu, "GitHub mutation"],
     [/(?:sed|perl)\s+[^\n]*\s-i(?:\s|$)/iu, "in-place edit"],
   ];
   for (const [pattern, reason] of patterns) {
