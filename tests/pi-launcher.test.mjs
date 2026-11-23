@@ -90,3 +90,34 @@ test("session environment patch is process-local and idempotent", () => {
   assert.equal(env.PI_GSTACK_BRIDGE_CLI, cli);
   assert.equal(env.PATH.split(":").filter((entry) => entry === "/opt/pi/node_modules/@earendil-works/pi-coding-agent/dist").length, 1);
 });
+
+test("preserves case-distinct POSIX directories when prepending the Pi directory", () => {
+  const directory = "/opt/Pi/bin";
+  const cli = `${directory}/pi`;
+  const files = new Set([cli]);
+  const plan = resolvePiLaunchPlan({
+    platform: "linux",
+    env: { PATH: `/usr/bin:${directory}:/opt/pi/bin:${directory}/:/usr/local/bin` },
+    processArgv: [],
+    processExecPath: "/usr/bin/node",
+    fileExists: (candidate) => files.has(candidate),
+  });
+
+  assert.equal(plan.command, cli);
+  assert.equal(plan.envPatch.PATH, `${directory}:/usr/bin:/opt/pi/bin:/usr/local/bin`);
+});
+
+test("deduplicates Windows PATH entries regardless of case and slash style", () => {
+  const directory = String.raw`C:\Tools\Pi`;
+  const cli = `${directory}\\pi.exe`;
+  const plan = resolvePiLaunchPlan({
+    platform: "win32",
+    env: { PI_BIN: cli, Path: String.raw`C:\Windows\System32;c:/tools/pi/;C:\Other;C:\TOOLS\PI` },
+    processArgv: [],
+    processExecPath: String.raw`C:\Program Files\nodejs\node.exe`,
+    fileExists: virtualFiles([cli]),
+  });
+
+  assert.equal(plan.command, cli);
+  assert.equal(plan.envPatch.Path, `${directory};${String.raw`C:\Windows\System32;C:\Other`}`);
+});
