@@ -54,13 +54,15 @@ function basename(value: string, platform: NodeJS.Platform): string {
 }
 
 function prependPath(env: NodeJS.ProcessEnv, directory: string, platform: NodeJS.Platform): string {
-  const key = pathKey(env, platform);
-  const separator = isWindows(platform) ? ";" : ":";
+  const windows = isWindows(platform);
+  const separator = windows ? ";" : ":";
   const entries = splitPath(pathValue(env, platform), platform);
-  const normalized = directory.replaceAll("\\", "/").replace(/\/+$/u, "").toLowerCase();
-  const filtered = entries.filter(
-    (entry) => entry.replaceAll("\\", "/").replace(/\/+$/u, "").toLowerCase() !== normalized,
-  );
+  const comparisonKey = (entry: string): string => {
+    const path = windows ? entry.replaceAll("\\", "/").toLowerCase() : entry;
+    return path.replace(/\/+$/u, "");
+  };
+  const normalized = comparisonKey(directory);
+  const filtered = entries.filter((entry) => comparisonKey(entry) !== normalized);
   return [directory, ...filtered].join(separator);
 }
 
