@@ -2,7 +2,7 @@
   "schema_version": 1,
   "case": "happy_path",
   "command": "npm run smoke:pi -- --case happy_path",
-  "sdk_version": "1.5.2",
+  "sdk_version": "1.6.0",
   "platform": "win32",
   "process_exit_codes": [
     0
