@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Fixed
+
+- Do not launch a Pi child if its run was cancelled before or during startup preparation.
+
 ## [0.1.6] - 2026-11-07
 
 ### Changed

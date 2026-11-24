@@ -19,6 +19,7 @@ const MAX_TIMEOUT_MS = 60 * 60 * 1000;
 const MAX_OUTPUT_CHARS = 50 * 1024;
 const MAX_CONTEXT_CHARS = 120 * 1024;
 const DEFAULT_TOOLS = "read,bash,grep,find,ls";
+const ABORTED_MESSAGE = "Pi child aborted.";
 
 export interface ChildSpawn {
   stdout?: NodeJS.ReadableStream;
@@ -273,6 +274,14 @@ export async function runPiChild(
     launchPlan: plan,
   };
 
+  const abortBeforeSpawn = async (): Promise<GstackBridgeRunResult> => {
+    details.exitCode = null;
+    await fs.writeFile(outputFile, ABORTED_MESSAGE, "utf8");
+    return { text: ABORTED_MESSAGE, details };
+  };
+
+  if (signal?.aborted) return abortBeforeSpawn();
+
   if (plan.confidence === "missing") {
     const text = `Pi child unavailable.\n\n${plan.warnings.join("\n")}`;
     await fs.writeFile(outputFile, text, "utf8");
@@ -296,6 +305,8 @@ export async function runPiChild(
   const spawn = options.spawn ?? defaultSpawner;
 
   let child: ChildSpawn;
+  // The startup update callback can also abort synchronously.
+  if (signal?.aborted) return abortBeforeSpawn();
   try {
     child = spawn(plan.command, [...plan.argsPrefix, ...args], {
       cwd,
@@ -342,7 +353,7 @@ export async function runPiChild(
 
   const output = clampOutput(`${stdout.value}\n${stderr.value}`.trim());
   const failure = signal?.aborted
-    ? "Pi child aborted."
+    ? ABORTED_MESSAGE
     : result.signal
       ? `Pi child timed out or was terminated after ${timeoutMs}ms.`
       : result.code === 0
