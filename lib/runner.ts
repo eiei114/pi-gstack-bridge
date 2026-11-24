@@ -2,6 +2,7 @@ import { execFile, spawn as nodeSpawn } from "node:child_process";
 import { promises as fs } from "node:fs";
 import { homedir, tmpdir } from "node:os";
 import path from "node:path";
+import { StringDecoder } from "node:string_decoder";
 import { promisify } from "node:util";
 import { applyPiLaunchPlan, resolvePiLaunchPlan } from "./pi-launcher.ts";
 import type {
@@ -208,11 +209,17 @@ function buildChildArgs(
   return args;
 }
 
-function appendStream(stream: NodeJS.ReadableStream | undefined, target: { value: string }): void {
-  stream?.on("data", (chunk: Buffer | string) => {
-    target.value = `${target.value}${chunk.toString()}`;
+function appendStream(stream: NodeJS.ReadableStream | undefined, target: { value: string }): () => void {
+  const decoder = new StringDecoder("utf8");
+  const append = (text: string) => {
+    target.value += text;
     if (target.value.length > MAX_OUTPUT_CHARS * 2) target.value = target.value.slice(-MAX_OUTPUT_CHARS * 2);
+  };
+  stream?.on("data", (chunk: Buffer | string) => {
+    // Strings are already decoded and cannot continue a pending byte sequence.
+    append(typeof chunk === "string" ? decoder.end() + chunk : decoder.write(chunk));
   });
+  return () => append(decoder.end());
 }
 
 function terminateChild(child: ChildSpawn): void {
@@ -321,8 +328,8 @@ export async function runPiChild(
     return { text, details };
   }
 
-  appendStream(child.stdout, stdout);
-  appendStream(child.stderr, stderr);
+  const flushStdout = appendStream(child.stdout, stdout);
+  const flushStderr = appendStream(child.stderr, stderr);
 
   const result = await new Promise<{ code: number | null; signal: NodeJS.Signals | null }>((resolve) => {
     let settled = false;
@@ -351,6 +358,8 @@ export async function runPiChild(
     child.on("close", (code: number | null, childSignal: NodeJS.Signals | null) => finish(code, childSignal));
   });
 
+  flushStdout();
+  flushStderr();
   const output = clampOutput(`${stdout.value}\n${stderr.value}`.trim());
   const failure = signal?.aborted
     ? ABORTED_MESSAGE
@@ -386,8 +395,8 @@ export async function smokePiLaunchPlan(plan: PiLaunchPlan, timeoutMs = 5000): P
   });
   const stdout = { value: "" };
   const stderr = { value: "" };
-  appendStream(child.stdout, stdout);
-  appendStream(child.stderr, stderr);
+  const flushStdout = appendStream(child.stdout, stdout);
+  const flushStderr = appendStream(child.stderr, stderr);
   const result = await new Promise<{ code: number | null }>((resolve) => {
     let settled = false;
     const finish = (code: number | null) => {
@@ -405,6 +414,8 @@ export async function smokePiLaunchPlan(plan: PiLaunchPlan, timeoutMs = 5000): P
       finish(code);
     });
   });
+  flushStdout();
+  flushStderr();
   const output = clampOutput(`${stdout.value}\n${stderr.value}`.trim(), 4000);
   return { status: result.code === 0 ? "ok" : "failed", output: output || `(exit ${result.code ?? "unknown"})` };
 }
