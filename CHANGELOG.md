@@ -5,6 +5,7 @@
 ### Fixed
 
 - Do not launch a Pi child if its run was cancelled before or during startup preparation.
+- Preserve UTF-8 characters split across Pi child stdout or stderr chunks in the result and `output.txt`.
 
 ## [0.1.6] - 2026-11-07
 

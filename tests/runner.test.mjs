@@ -23,6 +23,57 @@ async function makeRunRoot(t) {
   return runRoot;
 }
 
+async function runWithOutput(t, streams) {
+  const runRoot = await makeRunRoot(t);
+  const child = new EventEmitter();
+  child.kill = () => true;
+  for (const [name] of streams) child[name] ??= new EventEmitter();
+  const result = await runPiChild({ task: "Review." }, { cwd: runRoot }, undefined, undefined, {
+    runRoot,
+    launchPlan,
+    spawn: () => {
+      queueMicrotask(() => {
+        for (const [name, chunk] of streams) child[name].emit("data", chunk);
+        child.emit("close", 0, null);
+      });
+      return child;
+    },
+  });
+  assert.equal(result.details.exitCode, 0);
+  assert.equal(await readFile(result.details.outputFile, "utf8"), result.text);
+  return result.text;
+}
+
+test("split UTF-8 is decoded independently on stdout and stderr", async (t) => {
+  const out = Buffer.from("日本語");
+  const err = Buffer.from("🧪確認");
+  const text = await runWithOutput(t, [
+    ["stdout", out.subarray(0, 1)],
+    ["stderr", err.subarray(0, 2)],
+    ["stdout", out.subarray(1)],
+    ["stderr", err.subarray(2, 3)],
+    ["stderr", err.subarray(3)],
+  ]);
+  assert.equal(text, "日本語\n🧪確認");
+});
+
+test("a child with only stderr flushes an unfinished UTF-8 sequence", async (t) => {
+  const partial = Buffer.from("界").subarray(0, 2);
+  const text = await runWithOutput(t, [["stderr", "incomplete: "], ["stderr", partial]]);
+  assert.equal(text, "incomplete: \uFFFD");
+});
+
+test("a child with only stdout retains the bounded tail and truncation marker", async (t) => {
+  const limit = 50 * 1024;
+  const bytes = Buffer.from("界".repeat(2 * limit));
+  const text = await runWithOutput(t, [
+    ["stdout", "discarded prefix"],
+    ["stdout", bytes.subarray(0, 1)],
+    ["stdout", bytes.subarray(1)],
+  ]);
+  assert.equal(text, `${"界".repeat(limit)}\n\n[output truncated]`);
+});
+
 test("child Pi arguments disable recursive gstack resources and carry model/tools", () => {
   const args = buildPiChildArgsForTest(
     {
