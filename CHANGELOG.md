@@ -6,6 +6,7 @@
 
 - Do not launch a Pi child if its run was cancelled before or during startup preparation.
 - Preserve UTF-8 characters split across Pi child stdout or stderr chunks in the result and `output.txt`.
+- Keep the Pi SDK smoke run from hanging forever when a Pi host survives cleanup on a loaded Windows machine; the run now releases the host's pipes and exits within a fixed deadline.
 
 ## [0.1.6] - 2026-11-07
 

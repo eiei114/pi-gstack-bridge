@@ -16,6 +16,14 @@ const SHORT_TIMEOUT_MS = 15_000;
 const STARTUP_TIMEOUT_MS = 30_000;
 const TOOL_TIMEOUT_MS = 25_000;
 const CLEANUP_TIMEOUT_MS = 1_000;
+// taskkill.exe can take several seconds to start on a loaded Windows host. A 1s cap let it time out,
+// leaving Pi alive with open pipes, so this script and the `npm run ci` chain above it never exited.
+const KILL_TIMEOUT_MS = 10_000;
+// The full five-case run takes about one minute; past this deadline the run is stuck, not slow.
+const RUN_DEADLINE_MS = 10 * 60_000;
+// After main settles, any handle still open is a leak. Fail instead of hanging the caller.
+const EXIT_GRACE_MS = 5_000;
+const liveChildren = new Set();
 const SDK_PACKAGE_NAMES = [
   "@earendil-works/pi-agent-core",
   "@earendil-works/pi-ai",
@@ -189,7 +197,7 @@ function errorLike(text) {
   return /uncaught exception|unhandled rejection|unhandled error|shutdown error|error during shutdown/iu.test(text);
 }
 
-export function createHostHarness(child, scenario) {
+export function createHostHarness(child, scenario, { killTree = killOwnedProcessTree } = {}) {
   const records = [];
   const protocolErrors = [];
   let stderr = "";
@@ -286,24 +294,60 @@ export function createHostHarness(child, scenario) {
       ]);
       clearTimeout(timer);
       if (!closed) {
-        await killOwnedProcessTree(child);
+        await killTree(child);
         throw new Error(`Pi RPC process ${child.pid} did not exit cleanly within ${CLEANUP_TIMEOUT_MS}ms`);
       }
       return closed;
     },
     async forceCleanup() {
       if (child.exitCode === null && child.signalCode === null) {
-        await killOwnedProcessTree(child);
+        await killTree(child);
         await Promise.race([closePromise, new Promise((resolve) => setTimeout(resolve, CLEANUP_TIMEOUT_MS))]);
+      }
+      if (child.exitCode === null && child.signalCode === null) {
+        process.stderr.write(`Pi RPC process ${child.pid} survived cleanup; releasing its pipes so the smoke run can exit\n`);
+        releaseChild(child);
       }
     },
   };
 }
 
+// Closing our pipe ends also gives Pi stdin EOF, which is how an RPC host is asked to shut down.
+export function releaseChild(child) {
+  for (const stream of [child.stdin, child.stdout, child.stderr]) stream?.destroy();
+  child.unref?.();
+}
+
+async function terminateLiveChildren() {
+  for (const child of liveChildren) {
+    await killOwnedProcessTree(child);
+    releaseChild(child);
+  }
+}
+
+export function armRunDeadline({ deadlineMs, terminate, exit, log = (message) => process.stderr.write(`${message}\n`) }) {
+  const timer = setTimeout(async () => {
+    log(`pi-sdk-smoke exceeded its ${deadlineMs}ms run deadline; terminating Pi children and exiting`);
+    try {
+      await terminate();
+    } catch (error) {
+      log(`pi-sdk-smoke could not terminate Pi children: ${error?.message ?? String(error)}`);
+    }
+    exit(1);
+  }, deadlineMs);
+  // Unref'd so a finished run is not held open; a stuck run is kept alive by its own handles, so this still fires.
+  timer.unref();
+  return () => clearTimeout(timer);
+}
+
 async function killOwnedProcessTree(child) {
   if (!child.pid || child.exitCode !== null || child.signalCode !== null) return;
   if (process.platform === "win32") {
-    spawnSync("taskkill.exe", ["/PID", String(child.pid), "/T", "/F"], { windowsHide: true, timeout: CLEANUP_TIMEOUT_MS, stdio: "ignore" });
+    const result = spawnSync("taskkill.exe", ["/PID", String(child.pid), "/T", "/F"], { windowsHide: true, timeout: KILL_TIMEOUT_MS, stdio: "ignore" });
+    // If taskkill could not run in time, at least terminate the direct child that owns our pipes.
+    if (result.error || result.status !== 0) {
+      try { child.kill(); } catch {}
+    }
   } else {
     try { process.kill(-child.pid, "SIGTERM"); } catch { try { child.kill("SIGTERM"); } catch {} }
   }
@@ -370,6 +414,8 @@ async function startHost(tempRoot, model, scenario) {
     windowsHide: true,
     detached: process.platform !== "win32",
   });
+  liveChildren.add(child);
+  child.once("close", () => liveChildren.delete(child));
   const harness = createHostHarness(child, scenario);
   return harness;
 }
@@ -604,8 +650,20 @@ async function main(args) {
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href) {
+  const disarm = armRunDeadline({
+    deadlineMs: RUN_DEADLINE_MS,
+    terminate: terminateLiveChildren,
+    exit: (code) => process.exit(code),
+  });
   main(process.argv.slice(2)).catch((error) => {
     console.error(error?.stack ?? String(error));
     process.exitCode = 1;
+  }).finally(async () => {
+    disarm();
+    await terminateLiveChildren();
+    setTimeout(() => {
+      console.error(`pi-sdk-smoke still had open handles ${EXIT_GRACE_MS}ms after finishing; forcing exit`);
+      process.exit(process.exitCode || 1);
+    }, EXIT_GRACE_MS).unref();
   });
 }

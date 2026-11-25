@@ -5,7 +5,7 @@ import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import test from "node:test";
-import { assertSemanticAssertions, assertToolResult, createHostHarness } from "../scripts/pi-sdk-smoke.mjs";
+import { armRunDeadline, assertSemanticAssertions, assertToolResult, createHostHarness } from "../scripts/pi-sdk-smoke.mjs";
 
 const root = fileURLToPath(new URL("../", import.meta.url));
 
@@ -17,6 +17,8 @@ function fakePiChild() {
   child.pid = 4321;
   child.exitCode = null;
   child.signalCode = null;
+  child.unrefCalls = 0;
+  child.unref = () => { child.unrefCalls += 1; };
   return child;
 }
 
@@ -84,6 +86,74 @@ test("RPC deadline includes current exit status, signal, and captured stderr", a
   child.stdout.destroy();
   child.stderr.destroy();
   child.stdin.destroy();
+});
+
+test("forced cleanup releases Pi pipes when the process tree survives the kill", async () => {
+  const child = fakePiChild();
+  let killCalls = 0;
+  const harness = createHostHarness(child, "kill-failed-test", { killTree: async () => { killCalls += 1; } });
+
+  await harness.forceCleanup();
+
+  assert.equal(killCalls, 1);
+  assert.equal(child.stdin.destroyed, true, "stdin must close so Pi receives EOF");
+  assert.equal(child.stdout.destroyed, true, "an open stdout pipe keeps the smoke process alive");
+  assert.equal(child.stderr.destroyed, true, "an open stderr pipe keeps the smoke process alive");
+  assert.equal(child.unrefCalls, 1);
+});
+
+test("forced cleanup leaves an already exited Pi process alone", async () => {
+  const child = fakePiChild();
+  let killCalls = 0;
+  const harness = createHostHarness(child, "exited-test", { killTree: async () => { killCalls += 1; } });
+  child.exitCode = 0;
+  child.emit("close", 0, null);
+
+  await harness.forceCleanup();
+
+  assert.equal(killCalls, 0);
+  assert.equal(child.unrefCalls, 0);
+  child.stdout.destroy();
+  child.stderr.destroy();
+  child.stdin.destroy();
+});
+
+test("run deadline terminates Pi children before exiting non-zero", async () => {
+  const calls = [];
+  const exitCode = await new Promise((resolve) => {
+    armRunDeadline({
+      deadlineMs: 10,
+      terminate: async () => { calls.push("terminate"); },
+      exit: (code) => { calls.push("exit"); resolve(code); },
+      log: () => {},
+    });
+  });
+
+  assert.equal(exitCode, 1);
+  assert.deepEqual(calls, ["terminate", "exit"]);
+});
+
+test("run deadline still exits when terminating Pi children fails", async () => {
+  const logs = [];
+  const exitCode = await new Promise((resolve) => {
+    armRunDeadline({
+      deadlineMs: 10,
+      terminate: async () => { throw new Error("taskkill unavailable"); },
+      exit: resolve,
+      log: (message) => logs.push(message),
+    });
+  });
+
+  assert.equal(exitCode, 1);
+  assert.match(logs.join("\n"), /taskkill unavailable/u);
+});
+
+test("disarmed run deadline never fires", async () => {
+  let fired = false;
+  const disarm = armRunDeadline({ deadlineMs: 10, terminate: async () => { fired = true; }, exit: () => { fired = true; }, log: () => {} });
+  disarm();
+  await new Promise((resolve) => setTimeout(resolve, 50));
+  assert.equal(fired, false);
 });
 
 test("committed smoke report follows the required Pi behavior contract", async () => {
